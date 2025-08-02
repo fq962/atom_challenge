@@ -1,11 +1,11 @@
-import { Component, signal, output } from '@angular/core';
+import { Component, signal, output, input, OnInit } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { CreateTaskRequest } from '../../models/task.model';
+import { CreateTaskRequest, Task } from '../../models/task.model';
 
 @Component({
   selector: 'app-create-task-dialog',
@@ -26,7 +26,9 @@ import { CreateTaskRequest } from '../../models/task.model';
         <div
           class="flex items-center justify-between p-4 border-b border-gray-200"
         >
-          <h3 class="text-lg font-semibold text-gray-900">Nueva Tarea</h3>
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ taskToEdit() ? 'Editar Tarea' : 'Nueva Tarea' }}
+          </h3>
           <button
             (click)="onCancel()"
             class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -163,9 +165,9 @@ import { CreateTaskRequest } from '../../models/task.model';
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   ></path>
                 </svg>
-                Creando...
+                {{ taskToEdit() ? 'Actualizando...' : 'Creando...' }}
               </span>
-              } @else { Crear Tarea }
+              } @else { {{ taskToEdit() ? 'Actualizar' : 'Crear Tarea' }} }
             </button>
           </div>
         </form>
@@ -174,9 +176,12 @@ import { CreateTaskRequest } from '../../models/task.model';
   `,
   styles: [],
 })
-export class CreateTaskDialogComponent {
+export class CreateTaskDialogComponent implements OnInit {
   taskForm: FormGroup;
   isSubmitting = signal(false);
+
+  // Input para la tarea a editar
+  taskToEdit = input<Task | null>(null);
 
   // Outputs usando la nueva API de Angular
   taskCreated = output<CreateTaskRequest>();
@@ -189,6 +194,23 @@ export class CreateTaskDialogComponent {
       priority: ['medium'],
       dueDate: [''],
     });
+  }
+
+  ngOnInit() {
+    // Si hay una tarea para editar, prellenar el formulario
+    if (this.taskToEdit()) {
+      const task = this.taskToEdit()!;
+      this.taskForm.patchValue({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority,
+        dueDate: task.dueDate ? this.formatDateForInput(task.dueDate) : '',
+      });
+    }
+  }
+
+  private formatDateForInput(date: Date): string {
+    return date.toISOString().split('T')[0];
   }
 
   async onSubmit() {

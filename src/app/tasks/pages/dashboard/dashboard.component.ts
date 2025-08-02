@@ -115,7 +115,7 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
           <div class="divide-y divide-gray-200">
             @for (task of taskService.tasks(); track task.id) {
             <div
-              class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
+              class="group px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
             >
               <input
                 type="checkbox"
@@ -148,25 +148,48 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
                 </p>
                 }
               </div>
-              <button
-                (click)="deleteTask(task.id)"
-                class="text-gray-400 hover:text-red-500 transition-colors p-1"
-                title="Eliminar"
+              <div
+                class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <button
+                  (click)="editTask(task)"
+                  class="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                  title="Editar"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  (click)="deleteTask(task.id)"
+                  class="text-gray-400 hover:text-red-500 transition-colors p-1"
+                  title="Eliminar"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
             }
           </div>
@@ -177,6 +200,7 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
       <!-- Dialog -->
       @if (showDialog()) {
       <app-create-task-dialog
+        [taskToEdit]="editingTask()"
         (taskCreated)="onTaskCreated($event)"
         (dialogClosed)="closeDialog()"
       />
@@ -187,19 +211,34 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
 })
 export class DashboardComponent {
   showDialog = signal(false);
+  editingTask = signal<Task | null>(null);
 
   constructor(public taskService: TaskService, private router: Router) {}
 
   openDialog() {
+    this.editingTask.set(null);
     this.showDialog.set(true);
   }
 
   closeDialog() {
     this.showDialog.set(false);
+    this.editingTask.set(null);
+  }
+
+  editTask(task: Task) {
+    this.editingTask.set(task);
+    this.showDialog.set(true);
   }
 
   onTaskCreated(taskData: CreateTaskRequest) {
-    this.taskService.createTask(taskData);
+    if (this.editingTask()) {
+      // Estamos editando una tarea existente
+      this.taskService.updateTask(this.editingTask()!.id, taskData);
+    } else {
+      // Estamos creando una nueva tarea
+      this.taskService.createTask(taskData);
+    }
+    this.closeDialog();
   }
 
   logout() {
