@@ -1,21 +1,27 @@
+export interface TaskResponse {
+  data: Task[];
+  message: string;
+  success: boolean;
+  count: number;
+}
+
 export interface Task {
   id: string;
   title: string;
-  description?: string;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  description: string;
+  status: boolean;
+  priority: number;
+  created_at: Date;
+  userId: string;
 }
 
 export interface CreateTaskRequest {
   title: string;
-  description?: string;
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: Date;
+  description: string;
+  priority: number;
+  userId: string;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
-  completed?: boolean;
+  status?: boolean;
 }

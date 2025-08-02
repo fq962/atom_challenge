@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TaskService } from '../../services/task.service';
@@ -92,7 +92,18 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
           </div>
         </div>
 
+        <!-- Loading State -->
+        @if (isLoading()) {
+        <div class="bg-white rounded-lg border border-gray-200 p-8 text-center">
+          <div
+            class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"
+          ></div>
+          <p class="mt-2 text-sm text-gray-500">Cargando tareas...</p>
+        </div>
+        }
+
         <!-- Tasks List -->
+        @if (!isLoading()) {
         <div class="bg-white rounded-lg border border-gray-200">
           @if (taskService.taskCount() === 0) {
           <div class="text-center py-8">
@@ -119,7 +130,7 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
             >
               <input
                 type="checkbox"
-                [checked]="task.completed"
+                [checked]="task.status"
                 (change)="toggleTask(task.id)"
                 class="h-4 w-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900 focus:ring-1"
               />
@@ -127,9 +138,9 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
                 <div class="flex items-center gap-2">
                   <h4
                     class="text-sm font-medium truncate"
-                    [class.text-gray-500]="task.completed"
-                    [class.line-through]="task.completed"
-                    [class.text-gray-900]="!task.completed"
+                    [class.text-gray-500]="task.status"
+                    [class.line-through]="task.status"
+                    [class.text-gray-900]="!task.status"
                   >
                     {{ task.title }}
                   </h4>
@@ -142,9 +153,9 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
                 <p class="text-xs text-gray-500 mt-0.5 truncate">
                   {{ task.description }}
                 </p>
-                } @if (task.dueDate) {
+                } @if (task.created_at) {
                 <p class="text-xs text-gray-400 mt-0.5">
-                  {{ task.dueDate | date : 'dd/MM/yyyy' }}
+                  {{ task.created_at | date : 'dd/MM/yyyy' }}
                 </p>
                 }
               </div>
@@ -195,6 +206,7 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
           </div>
           }
         </div>
+        }
       </div>
 
       <!-- Dialog -->
@@ -209,11 +221,34 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
   `,
   styles: [],
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   showDialog = signal(false);
   editingTask = signal<Task | null>(null);
+  isLoading = signal(true);
 
   constructor(public taskService: TaskService, private router: Router) {}
+
+  ngOnInit() {
+    this.loadTasks();
+  }
+
+  loadTasks() {
+    this.isLoading.set(true);
+    this.taskService.loadTasks().subscribe({
+      next: (response) => {
+        console.log('API Response:', response);
+        console.log('Tasks data:', response.data);
+
+        // Actualizar el signal del servicio con las tareas
+        this.taskService.setTasks(response.data);
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error al cargar las tareas:', error);
+        this.isLoading.set(false);
+      },
+    });
+  }
 
   openDialog() {
     this.editingTask.set(null);
@@ -233,12 +268,29 @@ export class DashboardComponent {
   onTaskCreated(taskData: CreateTaskRequest) {
     if (this.editingTask()) {
       // Estamos editando una tarea existente
-      this.taskService.updateTask(this.editingTask()!.id, taskData);
+      this.taskService.updateTask(this.editingTask()!.id, taskData).subscribe({
+        next: (updatedTask) => {
+          this.taskService.updateTaskInSignal(updatedTask);
+          this.closeDialog();
+        },
+        error: (error) => {
+          console.error('Error al actualizar la tarea:', error);
+          alert('Error al actualizar la tarea');
+        },
+      });
     } else {
       // Estamos creando una nueva tarea
-      this.taskService.createTask(taskData);
+      this.taskService.createTask(taskData).subscribe({
+        next: (newTask) => {
+          this.taskService.addTaskToSignal(newTask);
+          this.closeDialog();
+        },
+        error: (error) => {
+          console.error('Error al crear la tarea:', error);
+          alert('Error al crear la tarea');
+        },
+      });
     }
-    this.closeDialog();
   }
 
   logout() {
@@ -247,38 +299,46 @@ export class DashboardComponent {
   }
 
   toggleTask(id: string) {
-    this.taskService.toggleTaskCompletion(id);
+    this.taskService.toggleTaskStatus(id);
   }
 
   deleteTask(id: string) {
     if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-      this.taskService.deleteTask(id);
+      this.taskService.deleteTask(id).subscribe({
+        next: () => {
+          this.taskService.removeTaskFromSignal(id);
+        },
+        error: (error) => {
+          console.error('Error al eliminar la tarea:', error);
+          alert('Error al eliminar la tarea');
+        },
+      });
     }
   }
 
-  getPriorityClass(priority: string): string {
+  getPriorityClass(priority: number): string {
     const classes = {
-      low: 'bg-green-100 text-green-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      high: 'bg-red-100 text-red-800',
+      1: 'bg-green-100 text-green-800', // Baja
+      2: 'bg-yellow-100 text-yellow-800', // Media
+      3: 'bg-red-100 text-red-800', // Alta
     };
-    return classes[priority as keyof typeof classes] || classes['medium'];
+    return classes[priority as keyof typeof classes] || classes[2];
   }
 
-  getPriorityDotClass(priority: string): string {
+  getPriorityDotClass(priority: number): string {
     const classes = {
-      low: 'bg-green-500',
-      medium: 'bg-amber-500',
-      high: 'bg-red-500',
+      1: 'bg-green-500', // Baja
+      2: 'bg-amber-500', // Media
+      3: 'bg-red-500', // Alta
     };
-    return classes[priority as keyof typeof classes] || classes['medium'];
+    return classes[priority as keyof typeof classes] || classes[2];
   }
 
-  getPriorityLabel(priority: string): string {
+  getPriorityLabel(priority: number): string {
     const labels = {
-      low: 'Baja',
-      medium: 'Media',
-      high: 'Alta',
+      1: 'Baja',
+      2: 'Media',
+      3: 'Alta',
     };
     return labels[priority as keyof typeof labels] || 'Media';
   }

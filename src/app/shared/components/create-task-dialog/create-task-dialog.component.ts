@@ -70,7 +70,9 @@ import { CreateTaskRequest, Task } from '../../models/task.model';
               />
               @if (taskForm.get('title')?.invalid &&
               taskForm.get('title')?.touched) {
-              <p class="mt-1 text-xs text-red-600">El título es requerido</p>
+              <p class="mt-1 text-xs text-red-600">
+                El título es requerido (mínimo 3 caracteres)
+              </p>
               }
             </div>
 
@@ -80,50 +82,63 @@ import { CreateTaskRequest, Task } from '../../models/task.model';
                 for="description"
                 class="block text-sm font-medium text-gray-700 mb-1"
               >
-                Descripción
+                Descripción *
               </label>
               <textarea
                 id="description"
                 formControlName="description"
                 rows="3"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                placeholder="Detalles adicionales (opcional)"
+                placeholder="Describe los detalles de la tarea"
               ></textarea>
+              @if (taskForm.get('description')?.invalid &&
+              taskForm.get('description')?.touched) {
+              <p class="mt-1 text-xs text-red-600">
+                La descripción es requerida
+              </p>
+              }
             </div>
 
-            <!-- Priority & Due Date -->
+            <!-- Priority & User ID -->
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label
                   for="priority"
                   class="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Prioridad
+                  Prioridad *
                 </label>
                 <select
                   id="priority"
                   formControlName="priority"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                 >
-                  <option value="low">Baja</option>
-                  <option value="medium">Media</option>
-                  <option value="high">Alta</option>
+                  <option [value]="1">Baja</option>
+                  <option [value]="2">Media</option>
+                  <option [value]="3">Alta</option>
                 </select>
               </div>
 
               <div>
                 <label
-                  for="dueDate"
+                  for="userId"
                   class="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Fecha límite
+                  Usuario ID *
                 </label>
                 <input
-                  type="date"
-                  id="dueDate"
-                  formControlName="dueDate"
+                  type="text"
+                  id="userId"
+                  formControlName="userId"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                  placeholder="ID del usuario"
                 />
+                @if (taskForm.get('userId')?.invalid &&
+                taskForm.get('userId')?.touched) {
+                <p class="mt-1 text-xs text-red-600">
+                  El ID de usuario es requerido
+                </p>
+                }
               </div>
             </div>
           </div>
@@ -190,9 +205,9 @@ export class CreateTaskDialogComponent implements OnInit {
   constructor(private formBuilder: FormBuilder) {
     this.taskForm = this.formBuilder.group({
       title: ['', [Validators.required, Validators.minLength(3)]],
-      description: [''],
-      priority: ['medium'],
-      dueDate: [''],
+      description: ['', [Validators.required]],
+      priority: [2, [Validators.required]], // Default: Media (2)
+      userId: ['', [Validators.required]],
     });
   }
 
@@ -202,15 +217,17 @@ export class CreateTaskDialogComponent implements OnInit {
       const task = this.taskToEdit()!;
       this.taskForm.patchValue({
         title: task.title,
-        description: task.description || '',
+        description: task.description,
         priority: task.priority,
-        dueDate: task.dueDate ? this.formatDateForInput(task.dueDate) : '',
+        userId: task.userId,
+      });
+    } else {
+      // Para nuevas tareas, establecer un userId por defecto
+      // En una aplicación real, esto vendría del servicio de autenticación
+      this.taskForm.patchValue({
+        userId: 'user-1', // Valor por defecto
       });
     }
-  }
-
-  private formatDateForInput(date: Date): string {
-    return date.toISOString().split('T')[0];
   }
 
   async onSubmit() {
@@ -224,9 +241,9 @@ export class CreateTaskDialogComponent implements OnInit {
         const formValue = this.taskForm.value;
         const taskData: CreateTaskRequest = {
           title: formValue.title,
-          description: formValue.description || undefined,
-          priority: formValue.priority,
-          dueDate: formValue.dueDate ? new Date(formValue.dueDate) : undefined,
+          description: formValue.description,
+          priority: Number(formValue.priority), // Asegurar que sea número
+          userId: formValue.userId,
         };
 
         this.taskCreated.emit(taskData);
@@ -243,7 +260,10 @@ export class CreateTaskDialogComponent implements OnInit {
   }
 
   onCancel() {
-    this.taskForm.reset({ priority: 'medium' });
+    this.taskForm.reset({
+      priority: 2, // Reset a prioridad media
+      userId: 'user-1', // Mantener userId por defecto
+    });
     this.dialogClosed.emit();
   }
 
