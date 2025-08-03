@@ -21,7 +21,7 @@ import {
 })
 export class TaskService {
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3000/api/tasks';
+  private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/tasks';
 
   constructor() {}
 

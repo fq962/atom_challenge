@@ -12,7 +12,7 @@ import {
 })
 export class UserService {
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3000/api/users';
+  private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/users';
 
   constructor() {}
 
