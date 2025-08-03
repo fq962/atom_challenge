@@ -212,7 +212,7 @@ export class CreateTaskDialogComponent implements OnInit {
         const taskData: ICreateTaskRequest = {
           title: formValue.title,
           description: formValue.description,
-          // priority: Number(formValue.priority), // Asegurar que sea número
+          priority: Number(formValue.priority), // Asegurar que sea número
           // id_user: '', // Se maneja en el backend con el token
         };
 

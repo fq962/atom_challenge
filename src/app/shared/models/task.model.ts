@@ -30,6 +30,7 @@ export interface GetAllTasksResponse {
 export interface ICreateTaskRequest {
   title: string; // Requerido, máximo 100 caracteres
   description: string; // Requerido, máximo 500 caracteres
+  priority: number; // Requerido - Prioridad de la tarea
 }
 
 export interface ITaskResponse {
@@ -65,7 +66,6 @@ export interface Task {
   is_done: boolean;
   priority: number;
   created_at: Date;
-  // id_user: string;
 }
 
 // export interface CreateTaskRequest {

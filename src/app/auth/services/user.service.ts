@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
-import { UserResponse } from '../../shared/models/user.model';
+import {
+  UserResponse,
+  CreateUserRequest,
+  CreateUserResponse,
+} from '../../shared/models/user.model';
 
 @Injectable({
   providedIn: 'root',
@@ -20,5 +24,21 @@ export class UserService {
         return throwError(() => error);
       })
     );
+  }
+
+  // Crear nuevo usuario
+  createUser(userData: CreateUserRequest): Observable<CreateUserResponse> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+    });
+
+    return this.http
+      .post<CreateUserResponse>(this.API_URL, userData, { headers })
+      .pipe(
+        catchError((error) => {
+          console.error('Error al crear el usuario:', error);
+          return throwError(() => error);
+        })
+      );
   }
 }

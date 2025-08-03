@@ -161,7 +161,7 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
                 </p>
                 } @if (task.created_at) {
                 <p class="text-xs text-gray-400 mt-0.5">
-                  {{ task.created_at | date : 'dd/MM/yyyy' }}
+                  {{ task.created_at | date : 'dd/MM/yyyy HH:mm' }}
                 </p>
                 }
               </div>
@@ -322,8 +322,8 @@ export class DashboardComponent implements OnInit {
             created_at: new Date(response.data.created_at),
           };
 
-          // Actualizar el signal agregando la nueva tarea
-          this.tasks.update((currentTasks) => [...currentTasks, newTask]);
+          // Actualizar el signal agregando la nueva tarea al principio
+          this.tasks.update((currentTasks) => [newTask, ...currentTasks]);
         }
 
         this.closeDialog();
@@ -344,8 +344,8 @@ export class DashboardComponent implements OnInit {
       id: currentTask.id,
       title: taskData.title,
       description: taskData.description,
-      // Mantener la prioridad existente si no se especifica
-      priority: currentTask.priority,
+      // Usar la nueva prioridad del formulario
+      priority: taskData.priority,
     };
 
     this.taskService.updateTask(updateRequest).subscribe({
