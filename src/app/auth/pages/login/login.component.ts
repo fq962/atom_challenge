@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -6,6 +6,7 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { Router } from '@angular/router';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-login',
@@ -21,7 +22,7 @@ import { Router } from '@angular/router';
             Iniciar Sesión
           </h2>
           <p class="mt-2 text-center text-sm text-gray-600">
-            Ingresa tus credenciales para acceder
+            Ingresa tu correo electrónico para acceder
           </p>
         </div>
         <form
@@ -32,75 +33,30 @@ import { Router } from '@angular/router';
           <div class="rounded-md shadow-sm space-y-4">
             <div>
               <label
-                for="username"
+                for="email"
                 class="block text-sm font-medium text-gray-700 mb-1"
               >
-                Usuario
+                Correo Electrónico
               </label>
               <input
-                id="username"
-                name="username"
-                type="text"
-                autocomplete="username"
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
                 required
-                formControlName="username"
+                formControlName="email"
                 class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Ingresa tu usuario"
+                placeholder="Ingresa tu correo electrónico"
               />
-              @if (loginForm.get('username')?.invalid &&
-              loginForm.get('username')?.touched) {
+              @if (loginForm.get('email')?.invalid &&
+              loginForm.get('email')?.touched) {
               <div class="mt-1 text-sm text-red-600">
-                El usuario es requerido
+                @if (loginForm.get('email')?.hasError('required')) { El correo
+                electrónico es requerido } @if
+                (loginForm.get('email')?.hasError('email')) { Ingresa un correo
+                electrónico válido }
               </div>
               }
-            </div>
-
-            <div>
-              <label
-                for="password"
-                class="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                required
-                formControlName="password"
-                class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Ingresa tu contraseña"
-              />
-              @if (loginForm.get('password')?.invalid &&
-              loginForm.get('password')?.touched) {
-              <div class="mt-1 text-sm text-red-600">
-                La contraseña es requerida
-              </div>
-              }
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label for="remember-me" class="ml-2 block text-sm text-gray-900">
-                Recordarme
-              </label>
-            </div>
-
-            <div class="text-sm">
-              <a
-                href="#"
-                class="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                ¿Olvidaste tu contraseña?
-              </a>
             </div>
           </div>
 
@@ -183,37 +139,46 @@ export class LoginComponent {
   errorMessage = signal<string | null>(null);
 
   loginForm: FormGroup;
+  private userService = inject(UserService);
 
   constructor(private formBuilder: FormBuilder, private router: Router) {
     this.loginForm = this.formBuilder.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      email: ['', [Validators.required, Validators.email]],
     });
   }
 
-  async onSubmit() {
+  onSubmit() {
     if (this.loginForm.valid) {
       this.isLoading.set(true);
       this.errorMessage.set(null);
 
-      const { username, password } = this.loginForm.value;
+      const { email } = this.loginForm.value;
 
-      try {
-        // Aquí puedes agregar la lógica de autenticación
-        console.log('Login attempt:', { username, password });
+      this.userService.getUserByEmail(email).subscribe({
+        next: (response) => {
+          if (response.success && response.exists) {
+            console.log('Usuario encontrado:', response);
+            // Aquí puedes guardar el token en localStorage o en un servicio de autenticación
+            localStorage.setItem('authToken', response.token);
 
-        // Simular llamada async
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Navegar al dashboard después del login exitoso
-        this.router.navigate(['/dashboard']);
-      } catch (error) {
-        this.errorMessage.set(
-          'Error al iniciar sesión. Verifica tus credenciales.'
-        );
-      } finally {
-        this.isLoading.set(false);
-      }
+            // Navegar al dashboard después del login exitoso
+            this.router.navigate(['/dashboard']);
+          } else {
+            this.errorMessage.set(
+              'Usuario no encontrado. Verifica tu correo electrónico.'
+            );
+          }
+        },
+        error: (error) => {
+          console.error('Error al verificar usuario:', error);
+          this.errorMessage.set(
+            'Error al verificar el usuario. Intenta nuevamente.'
+          );
+        },
+        complete: () => {
+          this.isLoading.set(false);
+        },
+      });
     } else {
       // Marcar todos los campos como tocados para mostrar errores
       Object.keys(this.loginForm.controls).forEach((key) => {

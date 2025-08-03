@@ -5,7 +5,7 @@ import {
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { CreateTaskRequest, Task } from '../../models/task.model';
+import { ICreateTaskRequest, Task } from '../../models/task.model';
 
 @Component({
   selector: 'app-create-task-dialog',
@@ -99,47 +99,23 @@ import { CreateTaskRequest, Task } from '../../models/task.model';
               }
             </div>
 
-            <!-- Priority & User ID -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  for="priority"
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Prioridad *
-                </label>
-                <select
-                  id="priority"
-                  formControlName="priority"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                >
-                  <option [value]="1">Baja</option>
-                  <option [value]="2">Media</option>
-                  <option [value]="3">Alta</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  for="userId"
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Usuario ID *
-                </label>
-                <input
-                  type="text"
-                  id="userId"
-                  formControlName="userId"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                  placeholder="ID del usuario"
-                />
-                @if (taskForm.get('userId')?.invalid &&
-                taskForm.get('userId')?.touched) {
-                <p class="mt-1 text-xs text-red-600">
-                  El ID de usuario es requerido
-                </p>
-                }
-              </div>
+            <!-- Priority -->
+            <div>
+              <label
+                for="priority"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Prioridad *
+              </label>
+              <select
+                id="priority"
+                formControlName="priority"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+              >
+                <option [value]="1">Baja</option>
+                <option [value]="2">Media</option>
+                <option [value]="3">Alta</option>
+              </select>
             </div>
           </div>
 
@@ -199,7 +175,7 @@ export class CreateTaskDialogComponent implements OnInit {
   taskToEdit = input<Task | null>(null);
 
   // Outputs usando la nueva API de Angular
-  taskCreated = output<CreateTaskRequest>();
+  taskCreated = output<ICreateTaskRequest>();
   dialogClosed = output<void>();
 
   constructor(private formBuilder: FormBuilder) {
@@ -207,7 +183,6 @@ export class CreateTaskDialogComponent implements OnInit {
       title: ['', [Validators.required, Validators.minLength(3)]],
       description: ['', [Validators.required]],
       priority: [2, [Validators.required]], // Default: Media (2)
-      userId: ['', [Validators.required]],
     });
   }
 
@@ -215,17 +190,12 @@ export class CreateTaskDialogComponent implements OnInit {
     // Si hay una tarea para editar, prellenar el formulario
     if (this.taskToEdit()) {
       const task = this.taskToEdit()!;
+      console.log('task', task);
+
       this.taskForm.patchValue({
         title: task.title,
         description: task.description,
         priority: task.priority,
-        userId: task.userId,
-      });
-    } else {
-      // Para nuevas tareas, establecer un userId por defecto
-      // En una aplicación real, esto vendría del servicio de autenticación
-      this.taskForm.patchValue({
-        userId: 'user-1', // Valor por defecto
       });
     }
   }
@@ -238,12 +208,12 @@ export class CreateTaskDialogComponent implements OnInit {
         // Simular async operation
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const formValue = this.taskForm.value;
-        const taskData: CreateTaskRequest = {
+        const formValue = this.taskForm.getRawValue();
+        const taskData: ICreateTaskRequest = {
           title: formValue.title,
           description: formValue.description,
-          priority: Number(formValue.priority), // Asegurar que sea número
-          userId: formValue.userId,
+          // priority: Number(formValue.priority), // Asegurar que sea número
+          // id_user: '', // Se maneja en el backend con el token
         };
 
         this.taskCreated.emit(taskData);
@@ -262,7 +232,6 @@ export class CreateTaskDialogComponent implements OnInit {
   onCancel() {
     this.taskForm.reset({
       priority: 2, // Reset a prioridad media
-      userId: 'user-1', // Mantener userId por defecto
     });
     this.dialogClosed.emit();
   }
