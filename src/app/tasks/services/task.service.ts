@@ -21,13 +21,32 @@ import {
   providedIn: 'root',
 })
 export class TaskService implements ITaskRepository {
+  /**
+   * Cliente HTTP de Angular para peticiones a la API.
+   * @private
+   */
   private http = inject(HttpClient);
+
+  /**
+   * URL base de la API de tareas.
+   * @private
+   * @readonly
+   */
   // private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/tasks';
   private readonly API_URL = 'http://localhost:3000/api/tasks';
 
   constructor() {}
 
-  // Obtener todas las tareas desde la API
+  // === MÉTODOS PÚBLICOS ===
+
+  /**
+   * Obtiene todas las tareas del usuario autenticado.
+   *
+   * @description
+   * Realiza petición GET con token de autorización.
+   *
+   * @returns Observable con respuesta de la API
+   */
   getAllTasks(): Observable<GetAllTasksResponse> {
     const token = localStorage.getItem('authToken');
 
@@ -43,7 +62,15 @@ export class TaskService implements ITaskRepository {
     );
   }
 
-  // Crear nueva tarea
+  /**
+   * Crea una nueva tarea.
+   *
+   * @description
+   * Realiza petición POST con datos de la tarea.
+   *
+   * @param taskData - Datos de la tarea a crear
+   * @returns Observable con la tarea creada
+   */
   createTask(taskData: ICreateTaskRequest): Observable<ITaskResponse> {
     const token = localStorage.getItem('authToken');
 
@@ -62,7 +89,15 @@ export class TaskService implements ITaskRepository {
       );
   }
 
-  // Eliminar tarea
+  /**
+   * Elimina una tarea existente.
+   *
+   * @description
+   * Realiza petición DELETE con ID de la tarea.
+   *
+   * @param taskData - Datos con ID de la tarea
+   * @returns Observable con confirmación de eliminación
+   */
   deleteTask(taskData: DeleteTaskRequest): Observable<DeleteTaskResponse> {
     const token = localStorage.getItem('authToken');
 
@@ -83,7 +118,15 @@ export class TaskService implements ITaskRepository {
       );
   }
 
-  // Actualizar tarea
+  /**
+   * Actualiza una tarea existente.
+   *
+   * @description
+   * Realiza petición PATCH con datos parciales de actualización.
+   *
+   * @param taskData - Datos de actualización con ID
+   * @returns Observable con la tarea actualizada
+   */
   updateTask(taskData: UpdateTaskRequestNew): Observable<ITaskResponse> {
     const token = localStorage.getItem('authToken');
 

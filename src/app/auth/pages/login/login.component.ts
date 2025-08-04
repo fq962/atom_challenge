@@ -184,22 +184,109 @@ import { CreateUserRequest } from '../../../shared/models/user.model';
   styles: [],
 })
 export class LoginComponent {
-  // Signals para el estado del componente
+  // === SIGNALS DE ESTADO ===
+
+  /**
+   * Signal que indica si hay una operación de carga en progreso.
+   *
+   * @description
+   * Controla el estado de loading durante las operaciones asíncronas
+   * como verificación de usuario y creación de cuenta.
+   *
+   * @default false
+   */
   isLoading = signal(false);
+
+  /**
+   * Signal que contiene el mensaje de error actual.
+   *
+   * @description
+   * Almacena mensajes de error para mostrar al usuario cuando
+   * ocurren fallos en el proceso de autenticación.
+   *
+   * @default null
+   */
   errorMessage = signal<string | null>(null);
+
+  /**
+   * Signal que controla la visibilidad del diálogo de creación de usuario.
+   *
+   * @description
+   * Se activa cuando el usuario no existe en el sistema y se
+   * necesita confirmación para crear una nueva cuenta.
+   *
+   * @default false
+   */
   showCreateUserDialog = signal(false);
+
+  /**
+   * Signal que almacena el email actual en proceso.
+   *
+   * @description
+   * Mantiene el email ingresado por el usuario para usarlo
+   * en el proceso de creación de cuenta si es necesario.
+   *
+   * @default ''
+   */
   currentEmail = signal<string>('');
 
+  // === PROPIEDADES ===
+
+  /**
+   * Formulario reactivo para el login.
+   *
+   * @description
+   * Contiene las validaciones y controles para el campo de email.
+   * Incluye validadores para campo requerido y formato de email válido.
+   */
   loginForm: FormGroup;
+
+  /**
+   * Servicio de usuario inyectado.
+   *
+   * @description
+   * Servicio para manejar operaciones relacionadas con usuarios
+   * como verificación de existencia y creación de cuentas.
+   */
   private userService = inject(UserService);
 
+  // === CONSTRUCTOR ===
+
+  /**
+   * Constructor del componente de login.
+   *
+   * @description
+   * Inicializa el formulario reactivo con las validaciones necesarias
+   * para el campo de email.
+   *
+   * @param formBuilder - Constructor de formularios reactivos de Angular
+   * @param router - Servicio de navegación de Angular
+   */
   constructor(private formBuilder: FormBuilder, private router: Router) {
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
     });
   }
 
-  onSubmit() {
+  // === MÉTODOS PÚBLICOS ===
+
+  /**
+   * Maneja el envío del formulario de login.
+   *
+   * @description
+   * Procesa el formulario de login, verifica si el usuario existe en el sistema.
+   * Si el usuario existe, inicia sesión y navega al dashboard.
+   * Si no existe, muestra el diálogo de confirmación para crear cuenta.
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta automáticamente al enviar el formulario
+   * this.onSubmit();
+   * ```
+   *
+   * @returns {void}
+   */
+  onSubmit(): void {
     if (this.loginForm.valid) {
       this.isLoading.set(true);
       this.errorMessage.set(null);
@@ -245,8 +332,22 @@ export class LoginComponent {
     }
   }
 
-  // Confirmar creación de usuario
-  confirmCreateUser() {
+  /**
+   * Confirma la creación de un nuevo usuario.
+   *
+   * @description
+   * Crea una nueva cuenta de usuario con el email ingresado.
+   * Al completarse exitosamente, guarda el token y navega al dashboard.
+   *
+   * @example
+   * ```typescript
+   * Se ejecuta al confirmar en el diálogo de creación
+   * this.confirmCreateUser();
+   * ```
+   *
+   * @returns {void}
+   */
+  confirmCreateUser(): void {
     this.showCreateUserDialog.set(false);
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -281,8 +382,22 @@ export class LoginComponent {
     });
   }
 
-  // Cancelar creación de usuario
-  cancelCreateUser() {
+  /**
+   * Cancela el proceso de creación de usuario.
+   *
+   * @description
+   * Cierra el diálogo de confirmación y muestra un mensaje informativo
+   * indicando que el usuario no fue encontrado.
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta al cancelar en el diálogo de creación
+   * this.cancelCreateUser();
+   * ```
+   *
+   * @returns {void}
+   */
+  cancelCreateUser(): void {
     this.showCreateUserDialog.set(false);
     this.isLoading.set(false); // Resetear el estado de carga
     this.errorMessage.set(

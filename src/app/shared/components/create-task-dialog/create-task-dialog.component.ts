@@ -168,16 +168,74 @@ import { ICreateTaskRequest, Task } from '../../models/task.model';
   styles: [],
 })
 export class CreateTaskDialogComponent implements OnInit {
+  // === FORMULARIO ===
+
+  /**
+   * Formulario reactivo para la tarea.
+   *
+   * @description
+   * Contiene los controles para título, descripción y prioridad
+   * con sus respectivas validaciones.
+   */
   taskForm: FormGroup;
+
+  // === SIGNALS DE ESTADO ===
+
+  /**
+   * Signal que indica si el formulario se está enviando.
+   *
+   * @description
+   * Controla el estado de loading durante el proceso de
+   * creación o edición de la tarea.
+   *
+   * @default false
+   */
   isSubmitting = signal(false);
 
-  // Input para la tarea a editar
+  // === INPUTS ===
+
+  /**
+   * Tarea a editar (opcional).
+   *
+   * @description
+   * Si se proporciona una tarea, el diálogo se configurará
+   * en modo edición y precargará los datos del formulario.
+   *
+   * @default null
+   */
   taskToEdit = input<Task | null>(null);
 
-  // Outputs usando la nueva API de Angular
+  // === OUTPUTS ===
+
+  /**
+   * Evento emitido cuando se crea o actualiza una tarea.
+   *
+   * @description
+   * Se emite con los datos de la tarea cuando el formulario
+   * se envía exitosamente.
+   */
   taskCreated = output<ICreateTaskRequest>();
+
+  /**
+   * Evento emitido cuando se cierra el diálogo.
+   *
+   * @description
+   * Se emite al cancelar, cerrar con backdrop o completar
+   * exitosamente la operación.
+   */
   dialogClosed = output<void>();
 
+  // === CONSTRUCTOR ===
+
+  /**
+   * Constructor del componente de diálogo de tareas.
+   *
+   * @description
+   * Inicializa el formulario reactivo con las validaciones
+   * necesarias para título, descripción y prioridad.
+   *
+   * @param formBuilder - Constructor de formularios reactivos de Angular
+   */
   constructor(private formBuilder: FormBuilder) {
     this.taskForm = this.formBuilder.group({
       title: ['', [Validators.required, Validators.minLength(3)]],
@@ -186,7 +244,18 @@ export class CreateTaskDialogComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  // === LIFECYCLE HOOKS ===
+
+  /**
+   * Inicialización del componente.
+   *
+   * @description
+   * Si existe una tarea para editar, precarga el formulario
+   * con los datos de la tarea existente.
+   *
+   * @returns {void}
+   */
+  ngOnInit(): void {
     // Si hay una tarea para editar, prellenar el formulario
     if (this.taskToEdit()) {
       const task = this.taskToEdit()!;
@@ -200,7 +269,25 @@ export class CreateTaskDialogComponent implements OnInit {
     }
   }
 
-  async onSubmit() {
+  // === MÉTODOS PÚBLICOS ===
+
+  /**
+   * Maneja el envío del formulario.
+   *
+   * @description
+   * Procesa los datos del formulario y emite el evento de creación
+   * de tarea si la validación es exitosa. Incluye simulación de
+   * operación asíncrona con estado de carga.
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta automáticamente al enviar el formulario
+   * await this.onSubmit();
+   * ```
+   *
+   * @returns {Promise<void>}
+   */
+  async onSubmit(): Promise<void> {
     if (this.taskForm.valid) {
       this.isSubmitting.set(true);
 
@@ -229,14 +316,46 @@ export class CreateTaskDialogComponent implements OnInit {
     }
   }
 
-  onCancel() {
+  /**
+   * Cancela y cierra el diálogo.
+   *
+   * @description
+   * Resetea el formulario a su estado inicial y emite
+   * el evento de cierre del diálogo.
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta al hacer clic en cancelar
+   * this.onCancel();
+   * ```
+   *
+   * @returns {void}
+   */
+  onCancel(): void {
     this.taskForm.reset({
       priority: 2, // Reset a prioridad media
     });
     this.dialogClosed.emit();
   }
 
-  onBackdropClick(event: Event) {
+  /**
+   * Maneja el clic en el backdrop del modal.
+   *
+   * @description
+   * Cierra el diálogo solo si se hace clic directamente
+   * en el backdrop, no en el contenido del modal.
+   *
+   * @param event - Evento de clic del DOM
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta automáticamente al hacer clic en el backdrop
+   * this.onBackdropClick(event);
+   * ```
+   *
+   * @returns {void}
+   */
+  onBackdropClick(event: Event): void {
     if (event.target === event.currentTarget) {
       this.onCancel();
     }

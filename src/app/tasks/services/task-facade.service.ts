@@ -10,20 +10,32 @@ import {
   ITaskRepository,
 } from '../../shared/models/task.model';
 
-/**
- * Facade que encapsula todas las operaciones de tareas
- * Simplifica la interacción del componente con los servicios
- * Aplica el patrón Facade para ocultar la complejidad de las operaciones
- */
 @Injectable({
   providedIn: 'root',
 })
 export class TaskFacadeService {
+  /**
+   * Repositorio de tareas para operaciones HTTP.
+   * @private
+   */
   private taskRepository: ITaskRepository = inject(TaskService);
-  private dataTransformer = inject(TaskDataTransformerService);
 
   /**
-   * Obtiene todas las tareas transformadas al formato local
+   * Servicio de transformación de datos API ↔ Local.
+   * @private
+   */
+  private dataTransformer = inject(TaskDataTransformerService);
+
+  // === MÉTODOS PÚBLICOS ===
+
+  /**
+   * Obtiene todas las tareas transformadas al formato local.
+   *
+   * @description
+   * Coordina la obtención desde API y transformación a formato local.
+   * Maneja errores con mensajes amigables al usuario.
+   *
+   * @returns Observable<Task[]> - Tareas en formato local
    */
   getAllTasks(): Observable<Task[]> {
     return this.taskRepository.getAllTasks().pipe(
@@ -41,7 +53,13 @@ export class TaskFacadeService {
   }
 
   /**
-   * Crea una nueva tarea y la devuelve transformada
+   * Crea una nueva tarea y la devuelve transformada.
+   *
+   * @description
+   * Envía datos a la API y transforma la respuesta al formato local.
+   *
+   * @param taskData - Datos de la nueva tarea
+   * @returns Observable<Task> - Tarea creada en formato local
    */
   createTask(taskData: ICreateTaskRequest): Observable<Task> {
     return this.taskRepository.createTask(taskData).pipe(
@@ -59,7 +77,13 @@ export class TaskFacadeService {
   }
 
   /**
-   * Actualiza una tarea existente y la devuelve transformada
+   * Actualiza una tarea existente y la devuelve transformada.
+   *
+   * @description
+   * Aplica actualizaciones parciales y transforma la respuesta.
+   *
+   * @param taskData - Datos de actualización con ID
+   * @returns Observable<Task> - Tarea actualizada en formato local
    */
   updateTask(taskData: UpdateTaskRequestNew): Observable<Task> {
     return this.taskRepository.updateTask(taskData).pipe(
@@ -77,7 +101,13 @@ export class TaskFacadeService {
   }
 
   /**
-   * Elimina una tarea por su ID
+   * Elimina una tarea por su ID.
+   *
+   * @description
+   * Construye la petición de eliminación y maneja la respuesta.
+   *
+   * @param taskId - ID único de la tarea a eliminar
+   * @returns Observable<void> - Confirmación de eliminación
    */
   deleteTask(taskId: string): Observable<void> {
     const deleteRequest: DeleteTaskRequest = { id: taskId };
@@ -98,7 +128,14 @@ export class TaskFacadeService {
   }
 
   /**
-   * Alterna el estado de completado de una tarea
+   * Alterna el estado de completado de una tarea.
+   *
+   * @description
+   * Método de conveniencia que invierte el estado is_done de una tarea.
+   *
+   * @param taskId - ID de la tarea
+   * @param currentStatus - Estado actual (se invertirá)
+   * @returns Observable<Task> - Tarea con estado actualizado
    */
   toggleTaskStatus(taskId: string, currentStatus: boolean): Observable<Task> {
     const updateRequest: UpdateTaskRequestNew = {

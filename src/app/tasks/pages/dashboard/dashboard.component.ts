@@ -251,47 +251,222 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
   styles: [],
 })
 export class DashboardComponent implements OnInit {
-  // Injección de dependencias usando abstracciones (DIP)
+  // === INYECCIÓN DE DEPENDENCIAS (DIP) ===
+
+  /**
+   * Servicio facade para operaciones de tareas.
+   *
+   * @description
+   * Abstrae la complejidad de las operaciones CRUD de tareas
+   * siguiendo el principio de Inversión de Dependencias.
+   *
+   * @private
+   */
   private taskFacade = inject(TaskFacadeService);
+
+  /**
+   * Servicio de navegación de Angular.
+   *
+   * @description
+   * Utilizado para navegación programática, especialmente
+   * para el logout y redirección al login.
+   *
+   * @private
+   */
   private router = inject(Router);
+
+  /**
+   * Factory para crear estrategias de prioridad.
+   *
+   * @description
+   * Permite crear diferentes implementaciones de estrategias
+   * de prioridad siguiendo el patrón Factory Method.
+   *
+   * @private
+   */
   private priorityStrategyFactory = inject(PriorityStrategyFactory);
 
-  // Estrategia de prioridades (OCP)
+  // === ESTRATEGIAS (OCP) ===
+
+  /**
+   * Estrategia actual para manejo de prioridades.
+   *
+   * @description
+   * Implementación concreta de IPriorityStrategy que define
+   * cómo se renderizan visualmente las prioridades de las tareas.
+   *
+   * @readonly
+   */
   public readonly priorityStrategy: IPriorityStrategy;
 
-  // Signals para el estado de la UI
+  // === SIGNALS DE ESTADO DE UI ===
+
+  /**
+   * Signal que controla la visibilidad del diálogo de tareas.
+   *
+   * @description
+   * Controla cuándo mostrar u ocultar el modal de creación/edición
+   * de tareas en la interfaz de usuario.
+   *
+   * @default false
+   */
   showDialog = signal(false);
+
+  /**
+   * Signal que almacena la tarea en modo edición.
+   *
+   * @description
+   * Cuando contiene una tarea, el diálogo se abre en modo edición.
+   * Cuando es null, el diálogo se abre en modo creación.
+   *
+   * @default null
+   */
   editingTask = signal<Task | null>(null);
+
+  /**
+   * Signal que indica si hay una operación de carga en progreso.
+   *
+   * @description
+   * Controla la visualización del spinner de carga mientras
+   * se obtienen las tareas desde el servidor.
+   *
+   * @default true
+   */
   isLoading = signal(true);
+
+  /**
+   * Signal que contiene mensajes de error para mostrar al usuario.
+   *
+   * @description
+   * Almacena mensajes de error para operaciones fallidas,
+   * mostrándolos en la interfaz de usuario cuando no está vacío.
+   *
+   * @default ''
+   */
   errorMessage = signal<string>('');
 
-  // Signals para las tareas
+  // === SIGNALS DE DATOS ===
+
+  /**
+   * Signal que contiene la lista completa de tareas del usuario.
+   *
+   * @description
+   * Array reactivo que se actualiza automáticamente cuando
+   * se realizan operaciones CRUD en las tareas.
+   *
+   * @default []
+   */
   tasks = signal<Task[]>([]);
 
-  // Computed signals para estadísticas
+  // === COMPUTED SIGNALS PARA ESTADÍSTICAS ===
+
+  /**
+   * Computed signal con las tareas completadas.
+   *
+   * @description
+   * Se recalcula automáticamente cuando cambia el signal de tareas,
+   * filtrando solo las tareas con is_done = true.
+   *
+   * @returns Array de tareas completadas
+   */
   completedTasks = computed(() =>
     this.tasks().filter((task) => task.is_done === true)
   );
+
+  /**
+   * Computed signal con las tareas pendientes.
+   *
+   * @description
+   * Se recalcula automáticamente cuando cambia el signal de tareas,
+   * filtrando solo las tareas con is_done = false.
+   *
+   * @returns Array de tareas pendientes
+   */
   pendingTasks = computed(() =>
     this.tasks().filter((task) => task.is_done === false)
   );
+
+  /**
+   * Computed signal con el total de tareas.
+   *
+   * @description
+   * Cuenta automáticamente el número total de tareas
+   * para mostrar en las estadísticas.
+   *
+   * @returns Número total de tareas
+   */
   taskCount = computed(() => this.tasks().length);
+
+  /**
+   * Computed signal con el número de tareas completadas.
+   *
+   * @description
+   * Cuenta automáticamente las tareas completadas
+   * para mostrar en las estadísticas.
+   *
+   * @returns Número de tareas completadas
+   */
   completedCount = computed(() => this.completedTasks().length);
+
+  /**
+   * Computed signal con el número de tareas pendientes.
+   *
+   * @description
+   * Cuenta automáticamente las tareas pendientes
+   * para mostrar en las estadísticas.
+   *
+   * @returns Número de tareas pendientes
+   */
   pendingCount = computed(() => this.pendingTasks().length);
 
+  // === CONSTRUCTOR ===
+
+  /**
+   * Constructor del componente dashboard.
+   *
+   * @description
+   * Inicializa la estrategia de prioridades usando el factory pattern.
+   * La estrategia se configura una sola vez al crear el componente.
+   */
   constructor() {
     // Inicializar estrategia de prioridades
     this.priorityStrategy =
       this.priorityStrategyFactory.createStrategy('default');
   }
 
-  ngOnInit() {
+  // === LIFECYCLE HOOKS ===
+
+  /**
+   * Inicialización del componente.
+   *
+   * @description
+   * Se ejecuta después de la construcción del componente.
+   * Inicia la carga de todas las tareas del usuario.
+   *
+   * @returns {void}
+   */
+  ngOnInit(): void {
     this.loadAllTasks();
   }
 
+  // === MÉTODOS PRIVADOS ===
+
   /**
-   * Carga todas las tareas usando el facade
-   * Responsabilidad única: coordinar la carga de datos
+   * Carga todas las tareas del usuario desde el servidor.
+   *
+   * @description
+   * Coordina la carga de datos utilizando el facade service.
+   * Maneja estados de loading y errores apropiadamente.
+   * Implementa el principio de Responsabilidad Única.
+   *
+   * @private
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta automáticamente en ngOnInit
+   * this.loadAllTasks();
+   * ```
    */
   private loadAllTasks(): void {
     this.isLoading.set(true);
@@ -311,18 +486,15 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Maneja tanto creación como actualización de tareas
-   */
-  handleTaskAction(taskData: ICreateTaskRequest): void {
-    if (this.editingTask()) {
-      this.updateTask(taskData);
-    } else {
-      this.createTask(taskData);
-    }
-  }
-
-  /**
-   * Crea una nueva tarea
+   * Crea una nueva tarea en el sistema.
+   *
+   * @description
+   * Utiliza el facade service para crear la tarea y actualiza
+   * la lista local agregando la nueva tarea al inicio.
+   *
+   * @param taskData - Datos de la nueva tarea
+   * @private
+   * @returns {void}
    */
   private createTask(taskData: ICreateTaskRequest): void {
     this.taskFacade.createTask(taskData).subscribe({
@@ -338,7 +510,15 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Actualiza una tarea existente
+   * Actualiza una tarea existente en el sistema.
+   *
+   * @description
+   * Toma los datos del formulario y los combina con el ID de la tarea
+   * que se está editando para enviar la actualización al servidor.
+   *
+   * @param taskData - Nuevos datos de la tarea
+   * @private
+   * @returns {void}
    */
   private updateTask(taskData: ICreateTaskRequest): void {
     const currentTask = this.editingTask();
@@ -367,8 +547,51 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  // === MÉTODOS PÚBLICOS ===
+
   /**
-   * Elimina una tarea
+   * Maneja tanto creación como actualización de tareas.
+   *
+   * @description
+   * Método orquestador que determina si se debe crear una nueva tarea
+   * o actualizar una existente basándose en el estado de editingTask.
+   *
+   * @param taskData - Datos de la tarea del formulario
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el evento (taskCreated) del diálogo
+   * this.handleTaskAction({
+   *   title: "Nueva tarea",
+   *   description: "Descripción",
+   *   priority: 2
+   * });
+   * ```
+   */
+  handleTaskAction(taskData: ICreateTaskRequest): void {
+    if (this.editingTask()) {
+      this.updateTask(taskData);
+    } else {
+      this.createTask(taskData);
+    }
+  }
+
+  /**
+   * Elimina una tarea del sistema.
+   *
+   * @description
+   * Muestra confirmación al usuario antes de eliminar y actualiza
+   * la lista local removiendo la tarea eliminada.
+   *
+   * @param taskId - ID único de la tarea a eliminar
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el botón de eliminar en el template
+   * this.deleteTask("task-uuid-123");
+   * ```
    */
   deleteTask(taskId: string): void {
     if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
@@ -389,7 +612,21 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Alterna el estado de completado de una tarea
+   * Alterna el estado de completado de una tarea.
+   *
+   * @description
+   * Cambia el estado is_done de una tarea entre true/false
+   * y actualiza la interfaz de usuario inmediatamente.
+   *
+   * @param taskId - ID único de la tarea
+   * @param currentStatus - Estado actual de la tarea
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el checkbox en el template
+   * this.toggleTaskStatus("task-123", false); // Marcar como completada
+   * ```
    */
   toggleTaskStatus(taskId: string, currentStatus: boolean): void {
     this.taskFacade.toggleTaskStatus(taskId, currentStatus).subscribe({
@@ -410,7 +647,19 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Abre el diálogo para crear una nueva tarea
+   * Abre el diálogo para crear una nueva tarea.
+   *
+   * @description
+   * Resetea el estado de edición y muestra el modal en modo creación.
+   * El diálogo se configura automáticamente para crear una nueva tarea.
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el botón "Nueva" en el template
+   * this.openDialog();
+   * ```
    */
   openDialog(): void {
     this.editingTask.set(null);
@@ -418,7 +667,19 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Cierra el diálogo
+   * Cierra el diálogo de tareas.
+   *
+   * @description
+   * Oculta el modal y resetea el estado de edición.
+   * Limpia cualquier tarea que estuviera siendo editada.
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta automáticamente tras crear/editar o cancelar
+   * this.closeDialog();
+   * ```
    */
   closeDialog(): void {
     this.showDialog.set(false);
@@ -426,7 +687,20 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Abre el diálogo para editar una tarea
+   * Abre el diálogo para editar una tarea existente.
+   *
+   * @description
+   * Configura el modal en modo edición cargando los datos
+   * de la tarea seleccionada en el formulario.
+   *
+   * @param task - Tarea a editar
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el botón de editar en cada tarea
+   * this.editTask(selectedTask);
+   * ```
    */
   editTask(task: Task): void {
     this.editingTask.set(task);
@@ -434,7 +708,21 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Maneja el logout del usuario
+   * Maneja el logout del usuario.
+   *
+   * @description
+   * Navega de vuelta a la página de login. En una implementación
+   * completa, aquí se limpiaría el token de autenticación.
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // Se ejecuta desde el botón "Salir" en el header
+   * this.logout();
+   * ```
+   *
+   * @todo Implementar limpieza de token con AuthService
    */
   logout(): void {
     // Aquí se podría inyectar un AuthService para manejar el logout
