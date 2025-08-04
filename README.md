@@ -1,59 +1,142 @@
-# AtomChallenge
+# 📋 Atom Challenge - Gestor de Tareas
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.0.
+Una aplicación web de gestión de tareas desarrollada con Angular 20, standalone components y TailwindCSS.
 
-## Development server
+## 🚀 Requisitos Previos
 
-To start a local development server, run:
+Antes de comenzar, asegúrate de tener instalado:
 
-```bash
-ng serve
-```
+- **Node.js** (versión 18 o superior)
+- **npm** (viene incluido con Node.js)
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 📦 Instalación
 
-## Code scaffolding
+1. **Clona o descarga el proyecto:**
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+   ```bash
+   git clone <url-del-repositorio>
+   cd atom_challenge
+   ```
 
-```bash
-ng generate component component-name
-```
+2. **Instala las dependencias:**
+   ```bash
+   npm install
+   ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## 🛠️ Comandos de Desarrollo
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+### Iniciar en modo desarrollo
 
 ```bash
-ng build
+npm run start:dev
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+La aplicación estará disponible en: `http://localhost:4200`
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+### Iniciar en modo producción (local)
 
 ```bash
-ng test
+npm run start:prod
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+### Compilar el proyecto
 
 ```bash
-ng e2e
+npm run build
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### Modo watch (compilación automática)
 
-## Additional Resources
+```bash
+npm run watch
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## 🧪 Testing
+
+### Ejecutar tests
+
+```bash
+npm run test
+```
+
+## 🏗️ Estructura del Proyecto
+
+```
+src/
+├── app/
+│   ├── auth/              # Módulo de autenticación
+│   │   ├── pages/login/   # Página de login
+│   │   └── services/      # Servicios de usuario
+│   ├── shared/            # Componentes y servicios compartidos
+│   │   ├── components/    # Componentes reutilizables
+│   │   ├── models/        # Modelos de datos
+│   │   └── services/      # Servicios compartidos
+│   ├── tasks/             # Módulo de tareas
+│   │   ├── pages/dashboard/ # Dashboard principal
+│   │   └── services/      # Servicios de tareas
+│   └── environments/      # Configuraciones de entorno
+```
+
+## ✨ Características
+
+- **Angular 20** - Framework más reciente
+- **Standalone Components** - Arquitectura moderna sin módulos
+- **TailwindCSS** - Estilos utilitarios
+- **Reactive Forms** - Formularios reactivos
+- **Signals** - Gestión de estado reactiva
+- **SSR Ready** - Preparado para renderizado del servidor
+- **Tests Unitarios** - Testing con Jasmine y Karma
+
+## 🎯 Funcionalidades
+
+- ✅ Crear nuevas tareas
+- ✅ Editar tareas existentes
+- ✅ Eliminar tareas
+- ✅ Marcar tareas como completadas
+- ✅ Sistema de prioridades
+- ✅ Autenticación de usuarios
+- ✅ Dashboard con estadísticas
+
+## 🖥️ Uso de la Aplicación
+
+1. **Inicia la aplicación** con `npm run start:dev`
+2. **Navega** a `http://localhost:4200`
+3. **Inicia sesión** con tus credenciales
+4. **Gestiona tus tareas** desde el dashboard:
+   - Haz clic en "Nueva" para crear una tarea
+   - Usa el checkbox para marcar como completada
+   - Haz clic en el ícono de editar para modificar
+   - Haz clic en el ícono de eliminar para borrar
+
+## 🚀 Despliegue
+
+Para generar una versión optimizada para producción:
+
+```bash
+npm run build
+```
+
+Los archivos generados estarán en la carpeta `dist/` listos para ser desplegados en cualquier servidor web.
+
+## 📝 Scripts Disponibles
+
+| Comando              | Descripción               |
+| -------------------- | ------------------------- |
+| `npm run start:dev`  | Inicia en modo desarrollo |
+| `npm run start:prod` | Inicia en modo producción |
+| `npm run build`      | Compila para producción   |
+| `npm run watch`      | Compilación en modo watch |
+| `npm test`           | Ejecuta tests unitarios   |
+
+## 🔧 Tecnologías Utilizadas
+
+- **Angular 20**
+- **TypeScript**
+- **TailwindCSS**
+- **RxJS**
+- **Jasmine & Karma** (Testing)
+- **Node.js & Express** (SSR)
+
+---
+
+¡Listo para empezar! 🎉
