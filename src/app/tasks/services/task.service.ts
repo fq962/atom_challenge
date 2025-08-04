@@ -16,6 +16,7 @@ import {
   UpdateTaskRequestNew,
   ITaskRepository,
 } from '../../shared/models/task.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -32,8 +33,7 @@ export class TaskService implements ITaskRepository {
    * @private
    * @readonly
    */
-  // private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/tasks';
-  private readonly API_URL = 'http://localhost:3000/api/tasks';
+  private readonly API_URL = `${environment.apiUrl}/tasks`;
 
   constructor() {}
 
