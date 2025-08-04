@@ -14,14 +14,16 @@ import {
   DeleteTaskRequest,
   DeleteTaskResponse,
   UpdateTaskRequestNew,
+  ITaskRepository,
 } from '../../shared/models/task.model';
 
 @Injectable({
   providedIn: 'root',
 })
-export class TaskService {
+export class TaskService implements ITaskRepository {
   private http = inject(HttpClient);
-  private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/tasks';
+  // private readonly API_URL = 'https://atom-challenge-api.fly.dev/api/tasks';
+  private readonly API_URL = 'http://localhost:3000/api/tasks';
 
   constructor() {}
 

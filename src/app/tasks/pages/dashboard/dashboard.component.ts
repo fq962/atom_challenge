@@ -1,13 +1,12 @@
-import { Component, signal, OnInit, computed } from '@angular/core';
+import { Component, signal, OnInit, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { TaskService } from '../../services/task.service';
+import { TaskFacadeService } from '../../services/task-facade.service';
+import { PriorityStrategyFactory } from '../../../shared/services/priority-strategy.service';
 import {
   Task,
-  UpdateTaskRequest,
   ICreateTaskRequest,
-  DeleteTaskRequest,
-  UpdateTaskRequestNew,
+  IPriorityStrategy,
 } from '../../../shared/models/task.model';
 import { CreateTaskDialogComponent } from '../../../shared/components/create-task-dialog/create-task-dialog.component';
 
@@ -108,6 +107,28 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
         </div>
         }
 
+        <!-- Error State -->
+        @if (errorMessage()) {
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div class="flex">
+            <svg
+              class="h-5 w-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <div class="ml-3">
+              <p class="text-sm text-red-700">{{ errorMessage() }}</p>
+            </div>
+          </div>
+        </div>
+        }
+
         <!-- Tasks List -->
         @if (!isLoading()) {
         <div class="bg-white rounded-lg border border-gray-200">
@@ -152,7 +173,9 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
                   </h4>
                   <div
                     class="w-2 h-2 rounded-full flex-shrink-0"
-                    [class]="getPriorityDotClass(task.priority)"
+                    [class]="
+                      priorityStrategy.getPriorityDotClass(task.priority)
+                    "
                   ></div>
                 </div>
                 @if (task.description) {
@@ -228,14 +251,24 @@ import { CreateTaskDialogComponent } from '../../../shared/components/create-tas
   styles: [],
 })
 export class DashboardComponent implements OnInit {
+  // Injección de dependencias usando abstracciones (DIP)
+  private taskFacade = inject(TaskFacadeService);
+  private router = inject(Router);
+  private priorityStrategyFactory = inject(PriorityStrategyFactory);
+
+  // Estrategia de prioridades (OCP)
+  public readonly priorityStrategy: IPriorityStrategy;
+
+  // Signals para el estado de la UI
   showDialog = signal(false);
   editingTask = signal<Task | null>(null);
   isLoading = signal(true);
+  errorMessage = signal<string>('');
 
   // Signals para las tareas
   tasks = signal<Task[]>([]);
 
-  // Computed signals
+  // Computed signals para estadísticas
   completedTasks = computed(() =>
     this.tasks().filter((task) => task.is_done === true)
   );
@@ -246,301 +279,165 @@ export class DashboardComponent implements OnInit {
   completedCount = computed(() => this.completedTasks().length);
   pendingCount = computed(() => this.pendingTasks().length);
 
-  constructor(public taskService: TaskService, private router: Router) {}
+  constructor() {
+    // Inicializar estrategia de prioridades
+    this.priorityStrategy =
+      this.priorityStrategyFactory.createStrategy('default');
+  }
 
   ngOnInit() {
     this.loadAllTasks();
   }
 
-  // Función que usa el nuevo service para obtener todas las tareas
-  loadAllTasks() {
+  /**
+   * Carga todas las tareas usando el facade
+   * Responsabilidad única: coordinar la carga de datos
+   */
+  private loadAllTasks(): void {
     this.isLoading.set(true);
+    this.errorMessage.set('');
 
-    this.taskService.getAllTasks().subscribe({
-      next: (response) => {
-        console.log('Tareas obtenidas del API:', response);
-
-        if (response.success && response.data) {
-          // Convertir las fechas string a objetos Date
-          const tasksWithDates = response.data.map((task) => ({
-            ...task,
-            created_at: new Date(task.created_at),
-          }));
-
-          // Actualizar el signal local con las tareas
-          this.tasks.set(tasksWithDates);
-        }
-
+    this.taskFacade.getAllTasks().subscribe({
+      next: (tasks) => {
+        this.tasks.set(tasks);
         this.isLoading.set(false);
       },
       error: (error) => {
         console.error('Error al cargar las tareas:', error);
+        this.errorMessage.set(error.message || 'Error al cargar las tareas');
         this.isLoading.set(false);
       },
     });
   }
 
-  // loadTasks() {
-  //   this.isLoading.set(true);
-  //   this.taskService.loadTasks().subscribe({
-  //     next: (response) => {
-  //       console.log('API Response:', response);
-  //       console.log('Tasks data:', response.data);
-
-  //       // Actualizar el signal del servicio con las tareas
-  //       this.taskService.setTasks(response.data);
-  //       this.isLoading.set(false);
-  //     },
-  //     error: (error) => {
-  //       console.error('Error al cargar las tareas:', error);
-  //       this.isLoading.set(false);
-  //     },
-  //   });
-  // }
-
-  // Función que maneja tanto creación como actualización
-  handleTaskAction(taskData: ICreateTaskRequest) {
+  /**
+   * Maneja tanto creación como actualización de tareas
+   */
+  handleTaskAction(taskData: ICreateTaskRequest): void {
     if (this.editingTask()) {
-      // Es una actualización
-      this.onTaskUpdated(taskData);
+      this.updateTask(taskData);
     } else {
-      // Es una nueva tarea
-      this.onTaskCreated(taskData);
+      this.createTask(taskData);
     }
   }
 
-  // Función para crear nueva tarea usando el nuevo service
-  onTaskCreated(taskData: ICreateTaskRequest) {
-    this.taskService.createTask(taskData).subscribe({
-      next: (response) => {
-        console.log('Tarea creada exitosamente:', response);
-
-        if (response.success && response.data) {
-          // Convertir la fecha string a Date y agregar id_user
-          const newTask: Task = {
-            ...response.data,
-            created_at: new Date(response.data.created_at),
-          };
-
-          // Actualizar el signal agregando la nueva tarea al principio
-          this.tasks.update((currentTasks) => [newTask, ...currentTasks]);
-        }
-
+  /**
+   * Crea una nueva tarea
+   */
+  private createTask(taskData: ICreateTaskRequest): void {
+    this.taskFacade.createTask(taskData).subscribe({
+      next: (newTask) => {
+        this.tasks.update((currentTasks) => [newTask, ...currentTasks]);
         this.closeDialog();
       },
       error: (error) => {
         console.error('Error al crear la tarea:', error);
-        alert('Error al crear la tarea. Intenta nuevamente.');
+        this.errorMessage.set(error.message || 'Error al crear la tarea');
       },
     });
   }
 
-  // Función para actualizar tarea usando el nuevo service
-  onTaskUpdated(taskData: ICreateTaskRequest) {
+  /**
+   * Actualiza una tarea existente
+   */
+  private updateTask(taskData: ICreateTaskRequest): void {
     const currentTask = this.editingTask();
     if (!currentTask) return;
 
-    const updateRequest: UpdateTaskRequestNew = {
+    const updateData = {
       id: currentTask.id,
       title: taskData.title,
       description: taskData.description,
-      // Usar la nueva prioridad del formulario
       priority: taskData.priority,
     };
 
-    this.taskService.updateTask(updateRequest).subscribe({
-      next: (response) => {
-        console.log('Tarea actualizada exitosamente:', response);
-
-        if (response.success && response.data) {
-          // Convertir la fecha string a Date
-          const updatedTask: Task = {
-            ...response.data,
-            created_at: new Date(response.data.created_at),
-          };
-
-          // Actualizar el signal reemplazando la tarea actualizada
-          this.tasks.update((currentTasks) =>
-            currentTasks.map((task) =>
-              task.id === updatedTask.id ? updatedTask : task
-            )
-          );
-        }
-
+    this.taskFacade.updateTask(updateData).subscribe({
+      next: (updatedTask) => {
+        this.tasks.update((currentTasks) =>
+          currentTasks.map((task) =>
+            task.id === updatedTask.id ? updatedTask : task
+          )
+        );
         this.closeDialog();
       },
       error: (error) => {
         console.error('Error al actualizar la tarea:', error);
-        alert('Error al actualizar la tarea. Intenta nuevamente.');
+        this.errorMessage.set(error.message || 'Error al actualizar la tarea');
       },
     });
   }
 
-  // Función para eliminar tarea usando el nuevo service
-  deleteTask(taskId: string) {
-    if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-      const deleteRequest: DeleteTaskRequest = {
-        id: taskId,
-      };
-
-      this.taskService.deleteTask(deleteRequest).subscribe({
-        next: (response) => {
-          console.log('Tarea eliminada exitosamente:', response);
-
-          if (response.success) {
-            // Actualizar el signal removiendo la tarea eliminada
-            this.tasks.update((currentTasks) =>
-              currentTasks.filter((task) => task.id !== taskId)
-            );
-          }
-        },
-        error: (error) => {
-          console.error('Error al eliminar la tarea:', error);
-          alert('Error al eliminar la tarea. Intenta nuevamente.');
-        },
-      });
+  /**
+   * Elimina una tarea
+   */
+  deleteTask(taskId: string): void {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+      return;
     }
+
+    this.taskFacade.deleteTask(taskId).subscribe({
+      next: () => {
+        this.tasks.update((currentTasks) =>
+          currentTasks.filter((task) => task.id !== taskId)
+        );
+      },
+      error: (error) => {
+        console.error('Error al eliminar la tarea:', error);
+        this.errorMessage.set(error.message || 'Error al eliminar la tarea');
+      },
+    });
   }
 
-  // Función para alternar el estado de completado de una tarea
-  toggleTaskStatus(taskId: string, currentStatus: boolean) {
-    const updateRequest: UpdateTaskRequestNew = {
-      id: taskId,
-      is_done: !currentStatus,
-    };
-
-    this.taskService.updateTask(updateRequest).subscribe({
-      next: (response) => {
-        console.log('Estado de tarea actualizado:', response);
-
-        if (response.success && response.data) {
-          // Convertir la fecha string a Date
-          const updatedTask: Task = {
-            ...response.data,
-            created_at: new Date(response.data.created_at),
-          };
-
-          // Actualizar el signal reemplazando la tarea actualizada
-          this.tasks.update((currentTasks) =>
-            currentTasks.map((task) =>
-              task.id === updatedTask.id ? updatedTask : task
-            )
-          );
-        }
+  /**
+   * Alterna el estado de completado de una tarea
+   */
+  toggleTaskStatus(taskId: string, currentStatus: boolean): void {
+    this.taskFacade.toggleTaskStatus(taskId, currentStatus).subscribe({
+      next: (updatedTask) => {
+        this.tasks.update((currentTasks) =>
+          currentTasks.map((task) =>
+            task.id === updatedTask.id ? updatedTask : task
+          )
+        );
       },
       error: (error) => {
         console.error('Error al cambiar el estado de la tarea:', error);
-        alert('Error al cambiar el estado de la tarea.');
+        this.errorMessage.set(
+          error.message || 'Error al cambiar el estado de la tarea'
+        );
       },
     });
   }
 
-  openDialog() {
+  /**
+   * Abre el diálogo para crear una nueva tarea
+   */
+  openDialog(): void {
     this.editingTask.set(null);
     this.showDialog.set(true);
   }
 
-  closeDialog() {
+  /**
+   * Cierra el diálogo
+   */
+  closeDialog(): void {
     this.showDialog.set(false);
     this.editingTask.set(null);
   }
 
-  editTask(task: Task) {
+  /**
+   * Abre el diálogo para editar una tarea
+   */
+  editTask(task: Task): void {
     this.editingTask.set(task);
     this.showDialog.set(true);
   }
 
-  // handleTaskAction(taskData: CreateTaskRequest) {
-  //   if (this.editingTask()) {
-  //     const updateData: UpdateTaskRequest = {
-  //       id: this.editingTask()!.id,
-  //       title: taskData.title,
-  //       description: taskData.description,
-  //       priority: taskData.priority,
-  //     };
-  //     this.onTaskUpdated(updateData);
-  //   } else {
-  //     this.onTaskCreated(taskData);
-  //   }
-  // }
-
-  // onTaskCreated(taskData: CreateTaskRequest) {
-  //   this.taskService.createTask(taskData).subscribe({
-  //     next: (newTask) => {
-  //       console.log('Nueva tarea creada:', newTask);
-  //       this.taskService.addTaskToSignal(newTask.data);
-  //       this.closeDialog();
-  //     },
-  //     error: (error) => {
-  //       console.error('Error al crear la tarea:', error);
-  //       alert('Error al crear la tarea');
-  //     },
-  //   });
-  // }
-
-  // onTaskUpdated(taskData: UpdateTaskRequest) {
-  //   console.log('Enviando actualización de tarea:', taskData);
-
-  //   this.taskService.updateTask(taskData).subscribe({
-  //     next: (updatedTask) => {
-  //       console.log('Tarea actualizada exitosamente:', updatedTask);
-  //       this.taskService.updateTaskInSignal(updatedTask.data);
-  //       this.closeDialog();
-  //     },
-  //     error: (error) => {
-  //       console.error('Error al actualizar la tarea:', error);
-  //       alert('Error al actualizar la tarea. Intenta nuevamente.');
-  //     },
-  //   });
-  // }
-
-  logout() {
-    // Aquí puedes agregar lógica adicional como limpiar localStorage, etc.
+  /**
+   * Maneja el logout del usuario
+   */
+  logout(): void {
+    // Aquí se podría inyectar un AuthService para manejar el logout
     this.router.navigate(['/login']);
-  }
-
-  // toggleTask(id: string) {
-  //   this.taskService.toggleTaskStatus(id);
-  // }
-
-  // deleteTask(id: string) {
-  //   if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-  //     this.taskService.deleteTask(id).subscribe({
-  //       next: () => {
-  //         this.taskService.removeTaskFromSignal(id);
-  //       },
-  //       error: (error) => {
-  //         console.error('Error al eliminar la tarea:', error);
-  //         alert('Error al eliminar la tarea');
-  //       },
-  //     });
-  //   }
-  // }
-
-  getPriorityClass(priority: number): string {
-    const classes = {
-      1: 'bg-green-100 text-green-800', // Baja
-      2: 'bg-yellow-100 text-yellow-800', // Media
-      3: 'bg-red-100 text-red-800', // Alta
-    };
-    return classes[priority as keyof typeof classes] || classes[2];
-  }
-
-  getPriorityDotClass(priority: number): string {
-    const classes = {
-      1: 'bg-green-500', // Baja
-      2: 'bg-amber-500', // Media
-      3: 'bg-red-500', // Alta
-    };
-    return classes[priority as keyof typeof classes] || classes[2];
-  }
-
-  getPriorityLabel(priority: number): string {
-    const labels = {
-      1: 'Baja',
-      2: 'Media',
-      3: 'Alta',
-    };
-    return labels[priority as keyof typeof labels] || 'Media';
   }
 }

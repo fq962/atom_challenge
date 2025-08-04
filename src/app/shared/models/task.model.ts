@@ -1,3 +1,5 @@
+import { Observable } from 'rxjs';
+
 export interface TaskResponse {
   data: Task[];
   message: string;
@@ -41,7 +43,7 @@ export interface ITaskResponse {
 }
 
 export interface DeleteTaskRequest {
-  id: string;
+  id: string; // Requerido - ID de la tarea a eliminar
 }
 
 export interface DeleteTaskResponse {
@@ -81,4 +83,32 @@ export interface UpdateTaskRequest extends Partial<ICreateTaskRequest> {
   description?: string;
   priority?: number;
   is_done?: boolean;
+}
+
+// Nueva interfaz para abstraer el servicio de tareas (DIP)
+export interface ITaskRepository {
+  getAllTasks(): Observable<GetAllTasksResponse>;
+  createTask(taskData: ICreateTaskRequest): Observable<ITaskResponse>;
+  updateTask(taskData: UpdateTaskRequestNew): Observable<ITaskResponse>;
+  deleteTask(taskData: DeleteTaskRequest): Observable<DeleteTaskResponse>;
+}
+
+// Interfaz para el transformador de datos (SRP)
+export interface ITaskDataTransformer {
+  transformApiTasksToLocal(tasks: any[]): Task[];
+  transformApiTaskToLocal(task: any): Task;
+}
+
+// Interfaz para estrategia de prioridades (OCP)
+export interface IPriorityStrategy {
+  getPriorityClass(priority: number): string;
+  getPriorityDotClass(priority: number): string;
+  getPriorityLabel(priority: number): string;
+}
+
+// Enums para mejor type safety
+export enum TaskPriority {
+  LOW = 1,
+  MEDIUM = 2,
+  HIGH = 3,
 }
